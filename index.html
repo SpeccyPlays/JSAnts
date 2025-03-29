@@ -9,23 +9,20 @@
     <script>
         const width = 300;
         const height = 300;
-        const ants = [];
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        const controller = new AntController(100, ctx, width, height);
         function init(){
-            for (i = 1; i < 10; i ++){
-                ants[i] = new Ant(width, height, 10, 10);
-            }
             window.requestAnimationFrame(draw);
         }
         function draw(){
-            ants.forEach(ant =>{
-                ctx.fillRect(ant.currentPos.x, ant.currentPos.y, 3, 3);
-            })
-            window.requestAnimationFrame(draw);
+            ctx.clearRect(0, 0, canvas.width, canvas.height)
+            controller.move();
+            controller.draw();
         }
-        const canvas = document.getElementById("canvas");
-        const ctx = canvas.getContext("2d");
-        let ant = new Ant(width, height, 10, 10);
+        setInterval(draw, 100);
         ctx.fillStyle = "green";
-        init();</script>
+        //init();</script>
+        
   </body>
 </html>

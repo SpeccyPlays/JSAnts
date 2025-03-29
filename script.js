@@ -13,18 +13,20 @@ class Ant {
     );
     this.antState = "WANDER";
     this.velocity = new Vector(velocity, velocity);
+    this.desiredVelocity = new Vector(0, 0);
     this.oldPos = new Vector(0, 0);
     this.desired = new Vector(0, 0);
     this.setDesired(screenWidth / 2, screenHeight / 2);
     this.avoidPos = new Vector(0, 0);
     this.maxForce = 10;
+    this.maxSpeed = 10;
   }
   generateRandomInteger(min, max) {
     return Math.floor(min + Math.random() * (max - min + 1));
   }
   setCurrentPosToOldPos() {
-    this.oldPos.x = currentPos.x;
-    this.oldPos.y = currentPos.y;
+    this.oldPos.x = this.currentPos.x;
+    this.oldPos.y = this.currentPos.y;
   }
   setDesired(x, y) {
     this.desired.x = x;
@@ -34,16 +36,8 @@ class Ant {
     this.avoidPos.x = x;
     this.avoidPos.y = y;
   }
-  setMagnitude(temp, inewMag) {
-    const length = sqrt(temp.x * temp.x + temp.y * temp.y);
-    if (length != 0) {
-      temp.x = (temp.x / length) * newMag;
-      temp.y = (temp.y / length) * newMag;
-    }
-    return temp;
-  }
   setMagnitude(temp, newMag) {
-    const length = sqrt(temp.x * temp.x + temp.y * temp.y);
+    const length = Math.sqrt(temp.x * temp.x + temp.y * temp.y);
     if (length != 0) {
       temp.x = (temp.x / length) * newMag;
       temp.y = (temp.y / length) * newMag;
@@ -122,9 +116,9 @@ class Ant {
         Makes the movement look more natural
     
         */
-    const tempX = this.currentPos.x + this.velocity.x * wanderingDistance;
-    const tempY = this.currentPos.y + this.velocity.y * wanderingDistance;
-    const randAngle = (this.generateRandomInteger(0, 360) * PI) / 180.0;
+    let tempX = this.currentPos.x + this.velocity.x * wanderingDistance;
+    let tempY = this.currentPos.y + this.velocity.y * wanderingDistance;
+    const randAngle = (this.generateRandomInteger(0, 360) * Math.PI) / 180.0;
     const randomDistance = this.generateRandomInteger(10, 30);
     tempX += randomDistance * Math.cos(randAngle);
     tempY += randomDistance * Math.sin(randAngle);
@@ -139,18 +133,18 @@ class Ant {
         */
     this.desiredVelocity.x = this.desired.x - this.currentPos.x;
     this.desiredVelocity.y = this.desired.y - this.currentPos.y;
-    this.desiredVelocity = this.setMagnitude(this.desiredVelocity, maxSpeed);
-    this.desiredVelocity.x *= maxSpeed;
-    this.desiredVelocity.y *= maxSpeed;
-    if (this.desiredVelocity.x > maxSpeed) {
-      this.desiredVelocity.x = maxSpeed;
-    } else if (this.desiredVelocity.x < -maxSpeed) {
-      this.desiredVelocity.x = -maxSpeed;
+    this.desiredVelocity = this.setMagnitude(this.desiredVelocity, this.maxSpeed);
+    this.desiredVelocity.x *= this.maxSpeed;
+    this.desiredVelocity.y *= this.maxSpeed;
+    if (this.desiredVelocity.x > this.maxSpeed) {
+      this.desiredVelocity.x = this.maxSpeed;
+    } else if (this.desiredVelocity.x < -this.maxSpeed) {
+      this.desiredVelocity.x = -this.maxSpeed;
     }
-    if (this.desiredVelocity.y > maxSpeed) {
-      this.desiredVelocity.y = maxSpeed;
-    } else if (this.desiredVelocity.y < -maxSpeed) {
-      this.desiredVelocity.y = -maxSpeed;
+    if (this.desiredVelocity.y > this.maxSpeed) {
+      this.desiredVelocity.y = this.maxSpeed;
+    } else if (this.desiredVelocity.y < -this.maxSpeed) {
+      this.desiredVelocity.y = -this.maxSpeed;
     }
   }
   steering(maxForce) {
@@ -184,5 +178,70 @@ class Ant {
   }
   getDesiredY() {
     return this.desired.y;
+  }
+}
+
+class AntController {
+  constructor(numOfAnts, ctx, width, height) {
+    this.numOfAnts = numOfAnts;
+    this.ants = [];
+    this.width = width;
+    this.height = height;
+    this.ctx = ctx;
+    this.ctx.fillStyle = "green";
+    for (let i = 0; i < this.numOfAnts; i++){
+        this.ants[i] = new Ant(this.width, this.height, 10, 10);
+    };
+    this.antSize = 2;
+    this.boundary = 5; //screenboundary
+    this.hudBoundary = 30; //how much space the HUD takes up - from y = 0 up
+    this.maxForce = 1; //how much steering force is applied - greater number means more sharp turns (I think)
+    this.wanderingDistance = 4; //how far in front of the ant when setting up wandering
+    //the size of the circle used to determine if an ant is gonna collide
+    //also used for the size of the food
+    this.collisionDetectRadius = 10;
+
+    this.antDetectRadius = this.antSize * 2; //size of circle to detect another ant
+    this.avoidanceFactor = 0.1; //used for avoiding a predator
+    this.minSeparationDistance = 3;
+  }
+  move(){
+    this.ants.forEach(ant => {
+        ant.setCurrentPosToOldPos();
+        ant.checkBoundary(this.width, this.height, this.boundary, this.hudBoundary);
+        ant.wandering(this.wanderingDistance);
+        //collision detection works better if steering here
+        ant.steering(this.maxForce);
+        //required for collision detection calculations
+        let dx = 0;
+       let dy = 0;
+        let neighbourAnts = 0;
+        //loop through all ants to check for collisions
+        for (let j = 0; j < this.numOfAnts; j++){
+            if(ant !== j){
+                if(ant.detectCollision(this.ants[j].currentPos.x, this.ants[j].currentPos.y, this.antDetectRadius)){
+                    dx += (this.ants[j].currentPos.x - ant.currentPos.x);
+                    dy += (this.ants[j].currentPos.y - ant.currentPos.y);
+                    neighbourAnts ++;
+                }
+            }
+        }
+         /***** the sqrt slows it down a bit but not much **/
+        /*let distance = Math.sqrt(dx * dx + dy * dy);
+        if (neighbourAnts > 0 && distance < this.minSeparationDistance) {
+            // Calculate a separation force to move the ant away from its neighbors
+            const separationForceX = -(dx / distance) * this.minSeparationDistance;
+            const separationForceY = -(dy / distance) * this.minSeparationDistance;
+            ant.addToVelocityX(separationForceX);
+            ant.addToVelocityY(separationForceY);
+        }*/
+        ant.locomotion();
+        //removeCoords(ants[i].oldPos.x, ants[i].oldPos.y, antSize);
+    });
+  }
+  draw() {
+    this.ants.forEach((ant) => {
+      this.ctx.fillRect(ant.currentPos.x, ant.currentPos.y, this.antSize, this.antSize);
+    });
   }
 }
