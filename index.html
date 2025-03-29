@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script src="/script.js"></script>
+    <meta charset="utf-8" />
+  </head>
+  <body>
+    <canvas  id="canvas" width="300" height="300"></canvas>
+    <script>
+        const width = 300;
+        const height = 300;
+        const ants = [];
+        function init(){
+            for (i = 1; i < 10; i ++){
+                ants[i] = new Ant(width, height, 10, 10);
+            }
+            window.requestAnimationFrame(draw);
+        }
+        function draw(){
+            ants.forEach(ant =>{
+                ctx.fillRect(ant.currentPos.x, ant.currentPos.y, 3, 3);
+            })
+            window.requestAnimationFrame(draw);
+        }
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        let ant = new Ant(width, height, 10, 10);
+        ctx.fillStyle = "green";
+        init();</script>
+  </body>
+</html>
