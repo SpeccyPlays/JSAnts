@@ -5,18 +5,18 @@
     <meta charset="utf-8" />
   </head>
   <body>
-    <canvas  id="canvas" width="300" height="300"></canvas>
+    <canvas  id="canvas" width="500" height="300"></canvas>
     <script>
-        const width = 300;
+        const width = 500;
         const height = 300;
         const canvas = document.getElementById("canvas");
         const ctx = canvas.getContext("2d");
-        const controller = new AntController(100, ctx, width, height);
+        const controller = new AntController(50, ctx, width, height);
         function init(){
             window.requestAnimationFrame(draw);
         }
         function draw(){
-            ctx.clearRect(0, 0, canvas.width, canvas.height)
+            controller.ctx.clearRect(0, 0, canvas.width, canvas.height)
             controller.move();
             controller.draw();
         }

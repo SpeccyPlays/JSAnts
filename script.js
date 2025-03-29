@@ -19,7 +19,7 @@ class Ant {
     this.setDesired(screenWidth / 2, screenHeight / 2);
     this.avoidPos = new Vector(0, 0);
     this.maxForce = 10;
-    this.maxSpeed = 10;
+    this.maxSpeed = 5;
   }
   generateRandomInteger(min, max) {
     return Math.floor(min + Math.random() * (max - min + 1));
@@ -50,16 +50,16 @@ class Ant {
   addToVelocityY(y) {
     this.velocity.y += y;
   }
-  checkBoundary(width, height, boundary, hudBoundary) {
+  checkBoundary(width, height, boundary, antSize) {
     //check if we're going to go off screen
     if (this.currentPos.x < boundary) {
       this.velocity.x += 2;
-    } else if (this.currentPos.x > width - boundary) {
+    } else if (this.currentPos.x > width - boundary - antSize) {
       this.velocity.x -= 2;
     }
-    if (this.currentPos.y < hudBoundary) {
+    if (this.currentPos.y < boundary - antSize) {
       this.velocity.y += 2;
-    } else if (this.currentPos.y > height - boundary) {
+    } else if (this.currentPos.y > height - boundary - antSize) {
       this.velocity.y -= 2;
     }
   }
@@ -119,10 +119,13 @@ class Ant {
     let tempX = this.currentPos.x + this.velocity.x * wanderingDistance;
     let tempY = this.currentPos.y + this.velocity.y * wanderingDistance;
     const randAngle = (this.generateRandomInteger(0, 360) * Math.PI) / 180.0;
-    const randomDistance = this.generateRandomInteger(10, 30);
+    const randomDistance = this.generateRandomInteger(100, 200);
     tempX += randomDistance * Math.cos(randAngle);
     tempY += randomDistance * Math.sin(randAngle);
     this.setDesired(tempX, tempY);
+
+    this.velocity.x += (Math.random() - 0.5) * 0.5;
+    this.velocity.y += (Math.random() - 0.5) * 0.5;
   }
   calculateVelocties() {
     /*
@@ -192,23 +195,23 @@ class AntController {
     for (let i = 0; i < this.numOfAnts; i++){
         this.ants[i] = new Ant(this.width, this.height, 10, 10);
     };
-    this.antSize = 2;
-    this.boundary = 5; //screenboundary
+    this.antSize = 5;
+    this.boundary = 30; //screenboundary
     this.hudBoundary = 30; //how much space the HUD takes up - from y = 0 up
     this.maxForce = 1; //how much steering force is applied - greater number means more sharp turns (I think)
-    this.wanderingDistance = 4; //how far in front of the ant when setting up wandering
+    this.wanderingDistance = 20; //how far in front of the ant when setting up wandering
     //the size of the circle used to determine if an ant is gonna collide
     //also used for the size of the food
     this.collisionDetectRadius = 10;
 
     this.antDetectRadius = this.antSize * 2; //size of circle to detect another ant
     this.avoidanceFactor = 0.1; //used for avoiding a predator
-    this.minSeparationDistance = 3;
+    this.minSeparationDistance = this.antSize;
   }
   move(){
     this.ants.forEach(ant => {
         ant.setCurrentPosToOldPos();
-        ant.checkBoundary(this.width, this.height, this.boundary, this.hudBoundary);
+        ant.checkBoundary(this.width, this.height, this.boundary, this.antSize);
         ant.wandering(this.wanderingDistance);
         //collision detection works better if steering here
         ant.steering(this.maxForce);
@@ -218,7 +221,7 @@ class AntController {
         let neighbourAnts = 0;
         //loop through all ants to check for collisions
         for (let j = 0; j < this.numOfAnts; j++){
-            if(ant !== j){
+            if(ant !== this.ants[j]){
                 if(ant.detectCollision(this.ants[j].currentPos.x, this.ants[j].currentPos.y, this.antDetectRadius)){
                     dx += (this.ants[j].currentPos.x - ant.currentPos.x);
                     dy += (this.ants[j].currentPos.y - ant.currentPos.y);
@@ -227,14 +230,14 @@ class AntController {
             }
         }
          /***** the sqrt slows it down a bit but not much **/
-        /*let distance = Math.sqrt(dx * dx + dy * dy);
+        let distance = Math.sqrt(dx * dx + dy * dy);
         if (neighbourAnts > 0 && distance < this.minSeparationDistance) {
             // Calculate a separation force to move the ant away from its neighbors
             const separationForceX = -(dx / distance) * this.minSeparationDistance;
             const separationForceY = -(dy / distance) * this.minSeparationDistance;
             ant.addToVelocityX(separationForceX);
             ant.addToVelocityY(separationForceY);
-        }*/
+        }
         ant.locomotion();
         //removeCoords(ants[i].oldPos.x, ants[i].oldPos.y, antSize);
     });
