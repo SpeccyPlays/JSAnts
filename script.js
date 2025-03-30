@@ -6,6 +6,8 @@ class Vector {
 }
 
 class Ant {
+  static maxForce = 5;
+  static maxSpeed = 6;
   constructor(screenWidth, screenHeight, velocity, boundary) {
     this.currentPos = new Vector(
       this.generateRandomInteger(boundary, screenWidth - boundary),
@@ -18,8 +20,7 @@ class Ant {
     this.desired = new Vector(0, 0);
     this.setDesired(screenWidth / 2, screenHeight / 2);
     this.avoidPos = new Vector(0, 0);
-    this.maxForce = 10;
-    this.maxSpeed = 5;
+    this.colour = "blue";
   }
   generateRandomInteger(min, max) {
     return Math.floor(min + Math.random() * (max - min + 1));
@@ -136,18 +137,18 @@ class Ant {
         */
     this.desiredVelocity.x = this.desired.x - this.currentPos.x;
     this.desiredVelocity.y = this.desired.y - this.currentPos.y;
-    this.desiredVelocity = this.setMagnitude(this.desiredVelocity, this.maxSpeed);
-    this.desiredVelocity.x *= this.maxSpeed;
-    this.desiredVelocity.y *= this.maxSpeed;
-    if (this.desiredVelocity.x > this.maxSpeed) {
-      this.desiredVelocity.x = this.maxSpeed;
-    } else if (this.desiredVelocity.x < -this.maxSpeed) {
-      this.desiredVelocity.x = -this.maxSpeed;
+    this.desiredVelocity = this.setMagnitude(this.desiredVelocity, Ant.maxSpeed);
+    this.desiredVelocity.x *= Ant.maxSpeed;
+    this.desiredVelocity.y *= Ant.maxSpeed;
+    if (this.desiredVelocity.x > Ant.maxSpeed) {
+      this.desiredVelocity.x = Ant.maxSpeed;
+    } else if (this.desiredVelocity.x < -Ant.maxSpeed) {
+      this.desiredVelocity.x = -Ant.maxSpeed;
     }
-    if (this.desiredVelocity.y > this.maxSpeed) {
-      this.desiredVelocity.y = this.maxSpeed;
-    } else if (this.desiredVelocity.y < -this.maxSpeed) {
-      this.desiredVelocity.y = -this.maxSpeed;
+    if (this.desiredVelocity.y > Ant.maxSpeed) {
+      this.desiredVelocity.y = Ant.maxSpeed;
+    } else if (this.desiredVelocity.y < -Ant.maxSpeed) {
+      this.desiredVelocity.y = -Ant.maxSpeed;
     }
   }
   steering(maxForce) {
@@ -185,6 +186,12 @@ class Ant {
 }
 
 class AntController {
+  static wanderingDistance = 20; //how far in front of the ant when setting up wandering
+  static antSize = 5;
+  static collisionDetectRadius = 10; //NOT USED. the size of the circle used to determine if an ant is gonna collide
+  static boundary = 50; //screenboundary
+  static hudBoundary = 30; //NOT USED. how much space the HUD takes up - from y = 0 up
+  static antDetectRadius = Ant.maxSpeed * 3 //size of circle to detect another ant
   constructor(numOfAnts, ctx, width, height) {
     this.numOfAnts = numOfAnts;
     this.ants = [];
@@ -195,26 +202,16 @@ class AntController {
     for (let i = 0; i < this.numOfAnts; i++){
         this.ants[i] = new Ant(this.width, this.height, 10, 10);
     };
-    this.antSize = 5;
-    this.boundary = 30; //screenboundary
-    this.hudBoundary = 30; //how much space the HUD takes up - from y = 0 up
-    this.maxForce = 1; //how much steering force is applied - greater number means more sharp turns (I think)
-    this.wanderingDistance = 20; //how far in front of the ant when setting up wandering
-    //the size of the circle used to determine if an ant is gonna collide
-    //also used for the size of the food
-    this.collisionDetectRadius = 10;
-
-    this.antDetectRadius = this.antSize * 2; //size of circle to detect another ant
     this.avoidanceFactor = 0.1; //used for avoiding a predator
-    this.minSeparationDistance = this.antSize;
+    this.minSeparationDistance = AntController.antSize;
   }
   move(){
     this.ants.forEach(ant => {
         ant.setCurrentPosToOldPos();
-        ant.checkBoundary(this.width, this.height, this.boundary, this.antSize);
-        ant.wandering(this.wanderingDistance);
+        ant.checkBoundary(this.width, this.height, AntController.boundary, AntController.antSize);
+        ant.wandering(AntController.wanderingDistance);
         //collision detection works better if steering here
-        ant.steering(this.maxForce);
+        ant.steering(Ant.maxForce);
         //required for collision detection calculations
         let dx = 0;
        let dy = 0;
@@ -222,7 +219,7 @@ class AntController {
         //loop through all ants to check for collisions
         for (let j = 0; j < this.numOfAnts; j++){
             if(ant !== this.ants[j]){
-                if(ant.detectCollision(this.ants[j].currentPos.x, this.ants[j].currentPos.y, this.antDetectRadius)){
+                if(ant.detectCollision(this.ants[j].currentPos.x, this.ants[j].currentPos.y, AntController.antDetectRadius)){
                     dx += (this.ants[j].currentPos.x - ant.currentPos.x);
                     dy += (this.ants[j].currentPos.y - ant.currentPos.y);
                     neighbourAnts ++;
@@ -237,14 +234,25 @@ class AntController {
             const separationForceY = -(dy / distance) * this.minSeparationDistance;
             ant.addToVelocityX(separationForceX);
             ant.addToVelocityY(separationForceY);
+            ant.colour = "red";
+        }
+        else {
+          ant.colour = "blue";
         }
         ant.locomotion();
-        //removeCoords(ants[i].oldPos.x, ants[i].oldPos.y, antSize);
     });
   }
   draw() {
     this.ants.forEach((ant) => {
-      this.ctx.fillRect(ant.currentPos.x, ant.currentPos.y, this.antSize, this.antSize);
+      this.ctx.fillStyle = ant.colour;
+      this.ctx.fillRect(ant.currentPos.x, ant.currentPos.y, AntController.antSize, AntController.antSize);
     });
+  }
+  updateAntMaxSpeed(newSpeed){
+    Ant.maxSpeed = newSpeed;
+    AntController.antDetectRadius = newSpeed * 3;
+  }
+  updateAntSteerForce(newForce){
+    Ant.maxForce = newForce;
   }
 }
